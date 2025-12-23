@@ -1,2 +1,5 @@
 .idea
 weather-light/
+data/train/
+data/test/ 
+data/val/
