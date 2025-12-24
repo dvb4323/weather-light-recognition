@@ -5,7 +5,7 @@ Dự án nhận diện điều kiện môi trường (Thời tiết và Thời g
 ## 🚀 Tính năng
 - **Multi-task Learning**: Sử dụng 1 backbone chung (ResNet18) và 2 heads phân loại riêng biệt.
 - **Dễ cấu hình**: Điều chỉnh tham số qua `config.yaml`.
-- **Đầy diện Pipeline**: Từ tiền xử lý dữ liệu, huấn luyện, đánh giá đến suy diễn (inference).
+- **Đầy đủ Pipeline**: Từ tiền xử lý dữ liệu, huấn luyện, đánh giá đến suy diễn (inference).
 
 ## 📁 Cấu trúc thư mục
 ```
@@ -32,33 +32,41 @@ project_root/
 ## 🛠 Hướng dẫn sử dụng
 
 ### 1. Cài đặt môi trường
+
 ```bash
 pip install -r requirements.txt
 ```
 
 ### 2. Chuẩn bị dữ liệu
+
 Đặt dữ liệu vào thư mục `data/` theo cấu trúc:
+
 - `data/train/img` & `data/train/ann`
+
 - `data/val/img` & `data/val/ann`
 
 ### 2. Huấn luyện
+
 ```bash
-python training/train.py
+python -m training.train
 ```
 Checkpoints sẽ được lưu trong thư mục `checkpoints/`.
 
 ### 3. Đánh giá
+
 ```bash
-python training/evaluate.py
+python -m training.evaluate
 ```
 Lệnh này sẽ tạo ra Confusion Matrix và in báo cáo F1-score.
 
 ### 4. Suy diễn (Inference)
+
 ```bash
-python inference/infer.py --image path/to/image.jpg --model checkpoints/best_model.pth
+python -m inference.infer --image path/to/image.jpg --model checkpoints/best_model.pth
 ```
 
 ## 📊 Kết quả mong đợi
+
 Mô hình sẽ xuất ra dự đoán dưới dạng:
 ```json
 {
@@ -68,6 +76,7 @@ Mô hình sẽ xuất ra dự đoán dưới dạng:
 ```
 
 ## 📝 Yêu cầu hệ thống
+
 - PyTorch, Torchvision
 - PIL, NumPy, YAML
 - Scikit-learn, Matplotlib, Seaborn (cho evaluation)

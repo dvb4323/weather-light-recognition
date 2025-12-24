@@ -3,3 +3,8 @@ weather-light/
 data/train/
 data/test/ 
 data/val/
+checkpoint_*.pth
+datasets/__pycache__/
+models/__pycache__/
+training/__pycache__/
+utils/__pycache__/
