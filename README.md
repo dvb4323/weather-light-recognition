@@ -74,9 +74,15 @@ Mô hình sẽ xuất ra dự đoán dưới dạng:
   "timeofday": "night"
 }
 ```
+### 5. Trực quan hóa kết quả
+
+```bash
+python app.py
+```
 
 ## 📝 Yêu cầu hệ thống
 
 - PyTorch, Torchvision
 - PIL, NumPy, YAML
 - Scikit-learn, Matplotlib, Seaborn (cho evaluation)
+- Flask (cho web app)

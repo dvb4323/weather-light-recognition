@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather & Time-of-Day Classification Demo</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🌤️ Weather & Time-of-Day Classification</h1>
+            <p class="subtitle">Upload an image to analyze weather conditions and time of day</p>
+        </header>
+
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-instructions">
+                <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                <p>Drag & drop an image here, or click to browse</p>
+                <p class="file-types">Supports: JPG, PNG, JPEG, GIF</p>
+                <input type="file" id="fileInput" accept="image/*">
+                <button id="uploadButton" class="btn-primary">Upload Image</button>
+            </div>
+        </div>
+
+        <div class="results-section" id="resultsSection" style="display: none;">
+            <div class="image-preview">
+                <h3>Uploaded Image</h3>
+                <div class="preview-container">
+                    <img id="previewImage" src="" alt="Uploaded image">
+                </div>
+            </div>
+
+            <div class="prediction-results">
+                <h3>Prediction Results</h3>
+                <div class="results-grid">
+                    <div class="result-card weather-result">
+                        <div class="result-icon">
+                            <i class="fas fa-cloud-sun"></i>
+                        </div>
+                        <div class="result-label">Weather</div>
+                        <div class="result-value" id="weatherResult">-</div>
+                    </div>
+
+                    <div class="result-card time-result">
+                        <div class="result-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="result-label">Time of Day</div>
+                        <div class="result-value" id="timeResult">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="upload-another-container">
+                <button id="uploadAnotherButton" class="btn-secondary">Upload Another Image</button>
+            </div>
+        </div>
+
+        <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+            <div class="loading-content">
+                <div class="spinner"></div>
+                <p>Analyzing image...</p>
+                <p class="loading-subtext">Running AI inference...</p>
+            </div>
+        </div>
+
+        <div class="error-message" id="errorMessage" style="display: none;">
+            <i class="fas fa-exclamation-triangle"></i>
+            <p id="errorText"></p>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
