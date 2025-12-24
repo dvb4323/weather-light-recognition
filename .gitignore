@@ -8,3 +8,4 @@ datasets/__pycache__/
 models/__pycache__/
 training/__pycache__/
 utils/__pycache__/
+static/uploads/
