@@ -62,8 +62,9 @@ def evaluate():
         )
     ])
 
+    # Test dataset (using original val set which has proper labels)
     test_dataset = BDDDataset(
-        img_dir=config['data']['test_images'],  # using val set
+        img_dir=config['data']['test_images'],
         ann_dir=config['data']['test_anns'],
         transforms=val_transforms,
         weather_classes=config['classes']['weather'],

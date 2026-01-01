@@ -51,10 +51,20 @@ class BDDDataset(Dataset):
             elif tag['name'] == 'timeofday':
                 timeofday = tag['value']
         
-        # Handle cases where tags might be missing or have unexpected values
-        # Defaulting to 0 if not found, or could be handled differently
-        weather_idx = self.weather_to_idx.get(weather, 0)
-        time_idx = self.time_to_idx.get(timeofday, 0)
+        # Map to class indices, using 'undefined' for missing/unknown values
+        if weather in self.weather_to_idx:
+            weather_idx = self.weather_to_idx[weather]
+        elif 'undefined' in self.weather_to_idx:
+            weather_idx = self.weather_to_idx['undefined']
+        else:
+            weather_idx = 0  # Fallback
+            
+        if timeofday in self.time_to_idx:
+            time_idx = self.time_to_idx[timeofday]
+        elif 'undefined' in self.time_to_idx:
+            time_idx = self.time_to_idx['undefined']
+        else:
+            time_idx = 0  # Fallback
         
         if self.transforms:
             image = self.transforms(image)

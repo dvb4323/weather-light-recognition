@@ -2,12 +2,12 @@
 
 data:
   root: "data"
-  train_images: "data/train/img"
-  train_anns: "data/train/ann"
-  val_images: "data/val/img"
-  val_anns: "data/val/ann"
-  test_images: "data/test/img"
-  test_anns: "data/test/ann"
+  train_images: "data/new_train/img"
+  train_anns: "data/new_train/ann"
+  val_images: "data/new_val/img"
+  val_anns: "data/new_val/ann"
+  test_images: "data/val/img"  # Original val set (has labels)
+  test_anns: "data/val/ann"
 
 classes:
   weather:
@@ -17,16 +17,18 @@ classes:
     - "rainy"
     - "snowy"
     - "foggy"
+    - "undefined"
   timeofday:
     - "daytime"
     - "dawn/dusk"
     - "night"
+    - "undefined"
 
 model:
   backbone: "resnet18"
   pretrained: true
-  num_weather_classes: 6
-  num_time_classes: 3
+  num_weather_classes: 7  # Including undefined
+  num_time_classes: 4     # Including undefined
 
 train:
   batch_size: 32
@@ -36,6 +38,9 @@ train:
   device: "cuda"  # or "cpu"
   checkpoint_dir: "checkpoints"
   save_freq: 5
+  # Class weights for down-weighting undefined (Option 2)
+  weather_undefined_weight: 0.01
+  time_undefined_weight: 0.01
 
 augmentation:
   input_size: [224, 224]

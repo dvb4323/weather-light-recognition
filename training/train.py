@@ -63,8 +63,26 @@ def train():
         num_time_classes=config['model']['num_time_classes']
     ).to(device)
 
-    # Loss & Optimizer
-    criterion = nn.CrossEntropyLoss()
+
+    # Loss & Optimizer with weighted loss for down-weighting undefined
+    # Create class weights: all classes weight 1.0, except undefined gets low weight
+    num_weather_classes = config['model']['num_weather_classes']
+    num_time_classes = config['model']['num_time_classes']
+    
+    # Weather weights: [1.0, 1.0, ..., 0.01] (last is undefined)
+    weather_weights = torch.ones(num_weather_classes)
+    weather_weights[-1] = config['train'].get('weather_undefined_weight', 0.01)
+    
+    # Time weights: [1.0, 1.0, ..., 0.01] (last is undefined)
+    time_weights = torch.ones(num_time_classes)
+    time_weights[-1] = config['train'].get('time_undefined_weight', 0.01)
+    
+    print(f"Weather class weights: {weather_weights.tolist()}")
+    print(f"Time class weights: {time_weights.tolist()}")
+    
+    weather_criterion = nn.CrossEntropyLoss(weight=weather_weights.to(device))
+    time_criterion = nn.CrossEntropyLoss(weight=time_weights.to(device))
+    
     optimizer = optim.AdamW(model.parameters(), lr=config['train']['lr'], weight_decay=config['train']['weight_decay'])
 
     # Training Loop
@@ -88,8 +106,8 @@ def train():
             optimizer.zero_grad()
             outputs = model(images)
 
-            loss_weather = criterion(outputs['weather'], weather_targets)
-            loss_time = criterion(outputs['timeofday'], time_targets)
+            loss_weather = weather_criterion(outputs['weather'], weather_targets)
+            loss_time = time_criterion(outputs['timeofday'], time_targets)
             loss = loss_weather + loss_time
 
             loss.backward()
@@ -103,7 +121,7 @@ def train():
             pbar.set_postfix({'loss': f"{train_loss.avg:.4f}", 'w_acc': f"{train_weather_acc.avg:.4f}", 't_acc': f"{train_time_acc.avg:.4f}"})
 
         # Validation
-        val_loss, val_w_acc, val_t_acc = evaluate(model, val_loader, criterion, device)
+        val_loss, val_w_acc, val_t_acc = evaluate(model, val_loader, weather_criterion, time_criterion, device)
         print(f"Val - Loss: {val_loss:.4f}, Weather Acc: {val_w_acc:.4f}, Time Acc: {val_t_acc:.4f}")
 
         # Checkpoint
@@ -115,7 +133,8 @@ def train():
         if (epoch + 1) % config['train']['save_freq'] == 0:
             torch.save(model.state_dict(), os.path.join(checkpoint_dir, f"checkpoint_epoch_{epoch+1}.pth"))
 
-def evaluate(model, val_loader, criterion, device):
+
+def evaluate(model, val_loader, weather_criterion, time_criterion, device):
     model.eval()
     losses = AverageMeter()
     weather_accs = AverageMeter()
@@ -129,8 +148,8 @@ def evaluate(model, val_loader, criterion, device):
 
             outputs = model(images)
 
-            loss_weather = criterion(outputs['weather'], weather_targets)
-            loss_time = criterion(outputs['timeofday'], time_targets)
+            loss_weather = weather_criterion(outputs['weather'], weather_targets)
+            loss_time = time_criterion(outputs['timeofday'], time_targets)
             loss = loss_weather + loss_time
 
             losses.update(loss.item(), images.size(0))
