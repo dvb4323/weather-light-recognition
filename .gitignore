@@ -11,3 +11,5 @@ training/__pycache__/
 utils/__pycache__/
 inference/__pycache__/
 static/uploads/
+venv/
+.idea/
