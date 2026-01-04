@@ -34,6 +34,11 @@ project_root/
 ### 1. Cài đặt môi trường
 
 ```bash
+python -m venv venv
+
+.\venv\Scripts\Activate.ps1
+Hoặc venv\Scripts\activate
+
 pip install -r requirements.txt
 ```
 
@@ -45,21 +50,39 @@ pip install -r requirements.txt
 
 - `data/val/img` & `data/val/ann`
 
-### 2. Huấn luyện
+
+### 3. Chuẩn bị dữ liệu
+
+* Kiểm tra môi trường có cuda không:
+
+```bash
+python check_gpu.py
+```
+
+* Chuẩn bị dữ liệu:
+
+```bash
+python split_dataset.py
+```
+Train: 59,990 images (from original 70K train)
+Val: 10,010 images (from original 70K train)
+Test: 10,000 images (original val set - has proper labels!)
+
+### 4. Huấn luyện
 
 ```bash
 python -m training.train
 ```
 Checkpoints sẽ được lưu trong thư mục `checkpoints/`.
 
-### 3. Đánh giá
+### 5. Đánh giá
 
 ```bash
 python -m training.evaluate
 ```
 Lệnh này sẽ tạo ra Confusion Matrix và in báo cáo F1-score.
 
-### 4. Suy diễn (Inference)
+### 6. Suy diễn (Inference)
 
 ```bash
 python -m inference.infer --image path/to/image.jpg --model checkpoints/best_model.pth
@@ -74,7 +97,7 @@ Mô hình sẽ xuất ra dự đoán dưới dạng:
   "timeofday": "night"
 }
 ```
-### 5. Trực quan hóa kết quả
+### 7. Trực quan hóa kết quả
 
 ```bash
 python app.py
