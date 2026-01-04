@@ -4,6 +4,11 @@ weather-light/
 data/train/
 data/test/ 
 data/val/
+data/new_train/ann/
+data/new_train/img/
+data/new_val/ann/
+data/new_val/ann/
+data/new_val/img/
 checkpoint_*.pth
 datasets/__pycache__/
 models/__pycache__/
