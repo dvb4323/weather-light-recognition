@@ -1,0 +1,10 @@
+              precision    recall  f1-score   support
+
+     daytime       0.92      0.97      0.95      5258
+   dawn/dusk       0.72      0.45      0.55       778
+       night       0.97      0.99      0.98      3929
+   undefined       0.00      0.00      0.00        35
+
+    accuracy                           0.93     10000
+   macro avg       0.65      0.60      0.62     10000
+weighted avg       0.92      0.93      0.93     10000

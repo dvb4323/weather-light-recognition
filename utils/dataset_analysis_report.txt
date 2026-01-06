@@ -1,0 +1,187 @@
+================================================================================
+BDD100K DATASET ANALYSIS REPORT
+================================================================================
+
+DATASET SUMMARY
+--------------------------------------------------------------------------------
+Split           Total Samples   Missing Weather    Missing Time   
+--------------------------------------------------------------------------------
+Train           59990           122                122            
+Validation      10010           15                 15             
+Test            10000           0                  0              
+
+
+================================================================================
+TRAIN SET ANALYSIS
+================================================================================
+Total samples: 59990
+
+WEATHER DISTRIBUTION
+--------------------------------------------------------------------------------
+Class                Count      Percentage   Balanced Weight
+--------------------------------------------------------------------------------
+clear                32062       53.45%       0.267
+overcast             7501        12.50%       1.143
+undefined            6916        11.53%       1.239
+snowy                4752         7.92%       1.803
+rainy                4341         7.24%       1.974
+partly cloudy        4186         6.98%       2.047
+foggy                110          0.18%      77.909
+
+TIME OF DAY DISTRIBUTION
+--------------------------------------------------------------------------------
+Class                Count      Percentage   Balanced Weight
+--------------------------------------------------------------------------------
+daytime              31388       52.32%       0.478
+night                24050       40.09%       0.624
+dawn/dusk            4310         7.18%       3.480
+undefined            120          0.20%      124.979
+
+WEATHER × TIME OF DAY CROSS-TABULATION
+--------------------------------------------------------------------------------
+Weather             dawn/dusk      daytime        night          undefined      Total     
+--------------------------------------------------------------------------------
+clear               1715           10655          19690          2              32062     
+foggy               13             43             54             0              110       
+overcast            989            6451           61             0              7501      
+partly cloudy       501            3644           41             0              4186      
+rainy               277            2159           1895           10             4341      
+snowy               377            2452           1922           1              4752      
+undefined           438            5984           387            107            6916      
+
+
+================================================================================
+VALIDATION SET ANALYSIS
+================================================================================
+Total samples: 10010
+
+WEATHER DISTRIBUTION
+--------------------------------------------------------------------------------
+Class                Count      Percentage   Balanced Weight
+--------------------------------------------------------------------------------
+clear                5282        52.77%       0.271
+overcast             1269        12.68%       1.127
+undefined            1203        12.02%       1.189
+snowy                797          7.96%       1.794
+rainy                729          7.28%       1.962
+partly cloudy        695          6.94%       2.058
+foggy                20           0.20%      71.500
+
+TIME OF DAY DISTRIBUTION
+--------------------------------------------------------------------------------
+Class                Count      Percentage   Balanced Weight
+--------------------------------------------------------------------------------
+daytime              5340        53.35%       0.469
+night                3921        39.17%       0.638
+dawn/dusk            717          7.16%       3.490
+undefined            17           0.17%      147.206
+
+WEATHER × TIME OF DAY CROSS-TABULATION
+--------------------------------------------------------------------------------
+Weather             dawn/dusk      daytime        night          undefined      Total     
+--------------------------------------------------------------------------------
+clear               289            1799           3194           0              5282      
+foggy               2              5              13             0              20        
+overcast            158            1100           11             0              1269      
+partly cloudy       69             618            8              0              695       
+rainy               51             363            313            2              729       
+snowy               59             410            327            1              797       
+undefined           89             1045           55             14             1203      
+
+
+================================================================================
+TEST SET ANALYSIS
+================================================================================
+Total samples: 10000
+
+WEATHER DISTRIBUTION
+--------------------------------------------------------------------------------
+Class                Count      Percentage   Balanced Weight
+--------------------------------------------------------------------------------
+clear                5346        53.46%       0.267
+overcast             1239        12.39%       1.153
+undefined            1157        11.57%       1.235
+snowy                769          7.69%       1.858
+rainy                738          7.38%       1.936
+partly cloudy        738          7.38%       1.936
+foggy                13           0.13%      109.890
+
+TIME OF DAY DISTRIBUTION
+--------------------------------------------------------------------------------
+Class                Count      Percentage   Balanced Weight
+--------------------------------------------------------------------------------
+daytime              5258        52.58%       0.475
+night                3929        39.29%       0.636
+dawn/dusk            778          7.78%       3.213
+undefined            35           0.35%      71.429
+
+WEATHER × TIME OF DAY CROSS-TABULATION
+--------------------------------------------------------------------------------
+Weather             dawn/dusk      daytime        night          undefined      Total     
+--------------------------------------------------------------------------------
+clear               307            1764           3274           1              5346      
+foggy               1              5              7              0              13        
+overcast            182            1039           18             0              1239      
+partly cloudy       95             638            5              0              738       
+rainy               55             396            286            1              738       
+snowy               74             422            273            0              769       
+undefined           64             994            66             33             1157      
+
+
+================================================================================
+RECOMMENDATIONS
+================================================================================
+
+CLASS IMBALANCE ANALYSIS (Train Set)
+--------------------------------------------------------------------------------
+
+Weather Classes:
+  Most common: clear (32062 samples)
+  Least common: foggy (110 samples)
+  Imbalance ratio: 291.5:1
+
+  Classes with <1% of data (problematic):
+    - foggy: 110 samples (0.18%) ⚠️
+
+Time of Day Classes:
+  Most common: daytime (31388 samples)
+  Least common: undefined (120 samples)
+  Imbalance ratio: 261.6:1
+
+  Classes with <5% of data (may need attention):
+    - undefined: 120 samples (0.20%) ⚠️
+
+SUGGESTED CLASS WEIGHTS FOR TRAINING
+--------------------------------------------------------------------------------
+
+Weather class weights (for config.yaml):
+```python
+weather_class_weights = [
+    0.2673,  # clear
+    77.9091,  # foggy
+    1.1425,  # overcast
+    2.0473,  # partly cloudy
+    1.9742,  # rainy
+    1.8035,  # snowy
+    1.2392,  # undefined
+]
+```
+
+Time of day class weights (for config.yaml):
+```python
+time_class_weights = [
+    3.4797,  # dawn/dusk
+    0.4778,  # daytime
+    0.6236,  # night
+    124.9792,  # undefined
+]
+```
+
+ACTION ITEMS
+--------------------------------------------------------------------------------
+1. ⚠️  CRITICAL: 'foggy' has only 110 samples (0.18%) - Consider removing or merging with similar class
+2. ⚠️  'undefined' is underrepresented (0.20%) - Use class weights or focal loss
+
+================================================================================
+END OF REPORT
+================================================================================

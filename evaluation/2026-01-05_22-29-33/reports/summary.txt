@@ -1,0 +1,8 @@
+
+Evaluation Summary
+==================
+Timestamp: 2026-01-05_22-29-33
+Checkpoint: checkpoints\best_model.pth
+
+Weather Accuracy: 0.6746
+Time of Day Accuracy: 0.9097

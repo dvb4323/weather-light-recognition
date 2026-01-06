@@ -16,7 +16,7 @@ classes:
     - "overcast"
     - "rainy"
     - "snowy"
-    - "foggy"
+    # foggy removed - only 110 samples (0.18%), untrainable
     - "undefined"
   timeofday:
     - "daytime"
@@ -27,7 +27,7 @@ classes:
 model:
   backbone: "resnet18"
   pretrained: true
-  num_weather_classes: 7  # Including undefined
+  num_weather_classes: 6  # Removed foggy
   num_time_classes: 4     # Including undefined
 
 train:

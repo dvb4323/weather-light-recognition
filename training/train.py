@@ -20,7 +20,7 @@ def train():
     device = torch.device(config['train']['device'] if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
-    # Transforms
+    # Transforms - Original simple approach that worked
     train_transforms = transforms.Compose([
         transforms.Resize(tuple(config['augmentation']['input_size'])),
         transforms.RandomHorizontalFlip(),
@@ -64,18 +64,18 @@ def train():
     ).to(device)
 
 
-    # Loss & Optimizer with weighted loss for down-weighting undefined
-    # Create class weights: all classes weight 1.0, except undefined gets low weight
+    # Loss & Optimizer - Original simple approach that worked
+    # All classes weight 1.0, except undefined gets low weight
     num_weather_classes = config['model']['num_weather_classes']
     num_time_classes = config['model']['num_time_classes']
     
-    # Weather weights: [1.0, 1.0, ..., 0.01] (last is undefined)
+    # Weather weights: [1.0, 1.0, 1.0, 1.0, 1.0, 0.01]
     weather_weights = torch.ones(num_weather_classes)
-    weather_weights[-1] = config['train'].get('weather_undefined_weight', 0.01)
+    weather_weights[-1] = 0.01  # undefined
     
-    # Time weights: [1.0, 1.0, ..., 0.01] (last is undefined)
+    # Time weights: [1.0, 1.0, 1.0, 0.01]
     time_weights = torch.ones(num_time_classes)
-    time_weights[-1] = config['train'].get('time_undefined_weight', 0.01)
+    time_weights[-1] = 0.01  # undefined
     
     print(f"Weather class weights: {weather_weights.tolist()}")
     print(f"Time class weights: {time_weights.tolist()}")
