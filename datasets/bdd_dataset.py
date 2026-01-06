@@ -48,6 +48,9 @@ class BDDDataset(Dataset):
         for tag in tags:
             if tag['name'] == 'weather':
                 weather = tag['value']
+                # Map foggy to overcast (foggy class removed - only 110 samples)
+                if weather == 'foggy':
+                    weather = 'overcast'
             elif tag['name'] == 'timeofday':
                 timeofday = tag['value']
         
