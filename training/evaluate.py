@@ -9,6 +9,7 @@ import numpy as np
 from tqdm import tqdm
 from datetime import datetime
 import os
+import argparse
 
 from datasets.bdd_dataset import BDDDataset
 from models.multitask_model import MultiTaskModel
@@ -31,7 +32,7 @@ def plot_confusion_matrix(cm, classes, title, save_path):
     plt.savefig(save_path)
     plt.close()
 
-def evaluate():
+def evaluate(backbone_name='resnet18'):
     # Load config
     with open("config.yaml", "r") as f:
         config = yaml.safe_load(f)
@@ -45,13 +46,16 @@ def evaluate():
         config['train']['device'] if torch.cuda.is_available() else "cpu"
     )
 
+    # Create evaluation directory with backbone name and timestamp
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    base_eval_dir = os.path.join("evaluation", timestamp)
+    base_eval_dir = os.path.join("evaluation", f"{backbone_name}_{timestamp}")
     report_dir = os.path.join(base_eval_dir, "reports")
     figure_dir = os.path.join(base_eval_dir, "figures")
 
     os.makedirs(report_dir, exist_ok=True)
     os.makedirs(figure_dir, exist_ok=True)
+    
+    print(f"Evaluation results will be saved to: {base_eval_dir}")
 
     val_transforms = transforms.Compose([
         transforms.Resize(tuple(config['augmentation']['input_size'])),
@@ -78,21 +82,27 @@ def evaluate():
         num_workers=4
     )
 
+    # Model with specified backbone
     model = MultiTaskModel(
+        backbone_name=backbone_name,
+        pretrained=False,  # Loading from checkpoint
         num_weather_classes=config['model']['num_weather_classes'],
         num_time_classes=config['model']['num_time_classes']
     ).to(device)
 
+    # Load checkpoint with backbone name
     checkpoint_path = os.path.join(
         config['train']['checkpoint_dir'],
-        "best_model.pth"
+        backbone_name,
+        f"best_model_{backbone_name}.pth"
     )
 
     if os.path.exists(checkpoint_path):
         model.load_state_dict(torch.load(checkpoint_path, map_location=device))
         print(f"Loaded checkpoint from {checkpoint_path}")
     else:
-        print("Warning: No checkpoint found. Evaluating with random weights.")
+        print(f"Warning: No checkpoint found at {checkpoint_path}")
+        print("Evaluating with random weights.")
 
     model.eval()
     
@@ -184,7 +194,25 @@ Time of Day Accuracy: {time_acc:.4f}
 
     with open(os.path.join(report_dir, "summary.txt"), "w") as f:
         f.write(summary)
+    
+    # Additional prints as per instruction
+    print(summary)
+    print(weather_report)
+    print(time_report)
 
 
 if __name__ == "__main__":
-    evaluate()
+    parser = argparse.ArgumentParser(description='Evaluate multi-task weather and time-of-day classifier')
+    parser.add_argument('--backbone', type=str, default='resnet18',
+                        choices=['resnet18', 'resnet34', 'resnet50', 
+                                'efficientnet_b0', 'efficientnet_b1', 'efficientnet_b2',
+                                'mobilenet_v3_small', 'mobilenet_v3_large'],
+                        help='Backbone architecture to evaluate')
+    
+    args = parser.parse_args()
+    
+    print("="*80)
+    print(f"Evaluating model with backbone: {args.backbone}")
+    print("="*80)
+    
+    evaluate(backbone_name=args.backbone)
