@@ -6,12 +6,13 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from tqdm import tqdm
+import argparse
 
 from datasets.bdd_dataset import BDDDataset
 from models.multitask_model import MultiTaskModel
 from utils.metrics import compute_accuracy, AverageMeter
 
-def train():
+def train(backbone_name='resnet18'):
     # Load config
     with open("config.yaml", "r") as f:
         config = yaml.safe_load(f)
@@ -19,6 +20,7 @@ def train():
     # Device setup
     device = torch.device(config['train']['device'] if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
+    print(f"Backbone: {backbone_name}")
 
     # Transforms - Original simple approach that worked
     train_transforms = transforms.Compose([
@@ -55,14 +57,15 @@ def train():
     train_loader = DataLoader(train_dataset, batch_size=config['train']['batch_size'], shuffle=True, num_workers=4)
     val_loader = DataLoader(val_dataset, batch_size=config['train']['batch_size'], shuffle=False, num_workers=4)
 
-    # Model
+    # Model with specified backbone
     model = MultiTaskModel(
-        backbone_name=config['model']['backbone'],
+        backbone_name=backbone_name,
         pretrained=config['model']['pretrained'],
         num_weather_classes=config['model']['num_weather_classes'],
         num_time_classes=config['model']['num_time_classes']
     ).to(device)
 
+    print(f"Model created with {backbone_name} backbone")
 
     # Loss & Optimizer - Original simple approach that worked
     # All classes weight 1.0, except undefined gets low weight
@@ -88,8 +91,11 @@ def train():
     # Training Loop
     best_val_loss = float('inf')
     num_epochs = config['train']['num_epochs']
-    checkpoint_dir = config['train']['checkpoint_dir']
+    
+    # Create checkpoint directory with backbone name
+    checkpoint_dir = os.path.join(config['train']['checkpoint_dir'], backbone_name)
     os.makedirs(checkpoint_dir, exist_ok=True)
+    print(f"Checkpoints will be saved to: {checkpoint_dir}")
 
     for epoch in range(num_epochs):
         model.train()
@@ -124,14 +130,14 @@ def train():
         val_loss, val_w_acc, val_t_acc = evaluate(model, val_loader, weather_criterion, time_criterion, device)
         print(f"Val - Loss: {val_loss:.4f}, Weather Acc: {val_w_acc:.4f}, Time Acc: {val_t_acc:.4f}")
 
-        # Checkpoint
+        # Checkpoint with backbone name
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            torch.save(model.state_dict(), os.path.join(checkpoint_dir, "best_model.pth"))
-            print("Saved best model.")
+            torch.save(model.state_dict(), os.path.join(checkpoint_dir, f"best_model_{backbone_name}.pth"))
+            print(f"Saved best model: best_model_{backbone_name}.pth")
 
         if (epoch + 1) % config['train']['save_freq'] == 0:
-            torch.save(model.state_dict(), os.path.join(checkpoint_dir, f"checkpoint_epoch_{epoch+1}.pth"))
+            torch.save(model.state_dict(), os.path.join(checkpoint_dir, f"checkpoint_epoch_{epoch+1}_{backbone_name}.pth"))
 
 
 def evaluate(model, val_loader, weather_criterion, time_criterion, device):
@@ -159,4 +165,17 @@ def evaluate(model, val_loader, weather_criterion, time_criterion, device):
     return losses.avg, weather_accs.avg, time_accs.avg
 
 if __name__ == "__main__":
-    train()
+    parser = argparse.ArgumentParser(description='Train multi-task weather and time-of-day classifier')
+    parser.add_argument('--backbone', type=str, default='resnet18',
+                        choices=['resnet18', 'resnet34', 'resnet50', 
+                                'efficientnet_b0', 'efficientnet_b1', 'efficientnet_b2',
+                                'mobilenet_v3_small', 'mobilenet_v3_large'],
+                        help='Backbone architecture to use')
+    
+    args = parser.parse_args()
+    
+    print("="*80)
+    print(f"Training with backbone: {args.backbone}")
+    print("="*80)
+    
+    train(backbone_name=args.backbone)
