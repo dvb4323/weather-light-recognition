@@ -3,6 +3,7 @@ import os
 import uuid
 import subprocess
 import json
+import sys  # Add this import
 from werkzeug.utils import secure_filename
 import tempfile
 
@@ -45,18 +46,47 @@ def upload_file():
         try:
             # Save the file
             file.save(filepath)
+            
+            print(f"File saved to: {filepath}")  # Debug log
 
             # Run inference using the existing script
+            # Update these paths to match your trained model
+            backbone = 'efficientnet_b0'  # Change this to match your model
+            model_path = f'checkpoints/{backbone}/best_model_{backbone}.pth'
+            
+            # Check if model file exists
+            if not os.path.exists(model_path):
+                print(f"ERROR: Model file not found: {model_path}")
+                # Fallback to old checkpoint if it exists
+                if os.path.exists('checkpoints/best_model.pth'):
+                    print("Using fallback: checkpoints/best_model.pth")
+                    model_path = 'checkpoints/best_model.pth'
+                    backbone = 'resnet18'
+                else:
+                    return jsonify({
+                        'error': 'Model checkpoint not found',
+                        'details': f'Looking for: {model_path}'
+                    }), 500
+            
+            print(f"Using model: {model_path}, backbone: {backbone}")  # Debug log
+            print(f"Python executable: {sys.executable}")  # Debug log
+            
             result = subprocess.run([
-                'python', '-m', 'inference.infer',
+                sys.executable, '-m', 'inference.infer',  # Use same Python as Flask
                 '--image', filepath,
-                '--model', 'checkpoints/best_model.pth'
+                '--model', model_path,
+                '--backbone', backbone
             ], capture_output=True, text=True, cwd='.')
+            
+            print(f"Inference return code: {result.returncode}")  # Debug log
+            print(f"Inference stdout: {result.stdout}")  # Debug log
+            print(f"Inference stderr: {result.stderr}")  # Debug log
 
             if result.returncode != 0:
                 return jsonify({
                     'error': 'Inference failed',
-                    'details': result.stderr
+                    'details': result.stderr,
+                    'stdout': result.stdout
                 }), 500
 
             # Parse the JSON output

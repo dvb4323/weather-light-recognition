@@ -1,0 +1,38 @@
+
+Evaluation Summary
+==================
+Timestamp: 2026-01-16_23-48-19
+Checkpoint: checkpoints\resnet18\best_model_resnet18.pth
+Backbone: resnet18
+
+Primary Metrics:
+----------------
+Weather Accuracy:       0.7517 (75.17%)
+Time of Day Accuracy:   0.9365 (93.65%)
+
+Advanced Metrics:
+-----------------
+Weather Top-3 Accuracy: 0.8864 (88.64%)
+Time Top-3 Accuracy:    0.9965 (99.65%)
+
+Average Confidence (Correct Predictions):
+------------------------------------------
+Weather:                0.9017 (90.17%)
+Time of Day:            0.9605 (96.05%)
+
+Per-Class Confidence (Weather):
+--------------------------------
+  clear          : 0.9322 (93.22%)
+  partly cloudy  : 0.7508 (75.08%)
+  overcast       : 0.8181 (81.81%)
+  rainy          : 0.8951 (89.51%)
+  snowy          : 0.9071 (90.71%)
+  undefined      : 0.0000 (0.00%)
+
+Per-Class Confidence (Time of Day):
+------------------------------------
+  daytime        : 0.9572 (95.72%)
+  dawn/dusk      : 0.7559 (75.59%)
+  night          : 0.9872 (98.72%)
+  undefined      : 0.0000 (0.00%)
+
