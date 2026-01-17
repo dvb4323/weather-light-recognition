@@ -31,10 +31,10 @@ model:
   num_time_classes: 4     # Including undefined
 
 train:
-  batch_size: 32
+  batch_size: 64  # Increased from 32 for more stable training
   num_epochs: 20
   lr: 0.0001
-  weight_decay: 0.00001
+  weight_decay: 0.001  # Increased from 0.00001 to prevent overfitting
   device: "cuda"  # or "cpu"
   checkpoint_dir: "checkpoints"
   save_freq: 5

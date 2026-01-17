@@ -1,0 +1,38 @@
+
+Evaluation Summary
+==================
+Timestamp: 2026-01-17_09-19-46
+Checkpoint: checkpoints\efficientnet_b0\best_model_efficientnet_b0.pth
+Backbone: efficientnet_b0
+
+Primary Metrics:
+----------------
+Weather Accuracy:       0.7608 (76.08%)
+Time of Day Accuracy:   0.9380 (93.80%)
+
+Advanced Metrics:
+-----------------
+Weather Top-3 Accuracy: 0.8870 (88.70%)
+Time Top-3 Accuracy:    0.9965 (99.65%)
+
+Average Confidence (Correct Predictions):
+------------------------------------------
+Weather:                0.9069 (90.69%)
+Time of Day:            0.9629 (96.29%)
+
+Per-Class Confidence (Weather):
+--------------------------------
+  clear          : 0.9380 (93.80%)
+  partly cloudy  : 0.7826 (78.26%)
+  overcast       : 0.8203 (82.03%)
+  rainy          : 0.8976 (89.76%)
+  snowy          : 0.9027 (90.27%)
+  undefined      : 0.0000 (0.00%)
+
+Per-Class Confidence (Time of Day):
+------------------------------------
+  daytime        : 0.9570 (95.70%)
+  dawn/dusk      : 0.7825 (78.25%)
+  night          : 0.9900 (99.00%)
+  undefined      : 0.0000 (0.00%)
+

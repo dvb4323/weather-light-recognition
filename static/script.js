@@ -36,7 +36,8 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Handle upload button click
-    uploadButton.addEventListener('click', function() {
+    uploadButton.addEventListener('click', function(e) {
+        e.stopPropagation();  // Prevent event from bubbling to uploadArea
         fileInput.click();
     });
 

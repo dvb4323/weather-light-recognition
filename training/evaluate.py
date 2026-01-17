@@ -13,6 +13,7 @@ import argparse
 
 from datasets.bdd_dataset import BDDDataset
 from models.multitask_model import MultiTaskModel
+from utils.advanced_metrics import top_k_accuracy, confidence_by_class, average_confidence
 
 
 def plot_confusion_matrix(cm, classes, title, save_path):
@@ -77,7 +78,7 @@ def evaluate(backbone_name='resnet18'):
 
     test_loader = DataLoader(
         test_dataset,
-        batch_size=config['train']['batch_size'],
+        batch_size=config['train']['batch_size'] * 2,  # Larger batch for faster evaluation
         shuffle=False,
         num_workers=4
     )
@@ -108,6 +109,7 @@ def evaluate(backbone_name='resnet18'):
     
     weather_preds, weather_targets = [], []
     time_preds, time_targets = [], []
+    weather_logits_all, time_logits_all = [], []
 
     with torch.no_grad():
         for images, targets in tqdm(test_loader, desc="Evaluating"):
@@ -122,6 +124,26 @@ def evaluate(backbone_name='resnet18'):
             weather_targets.extend(targets['weather'].numpy())
             time_preds.extend(t_pred)
             time_targets.extend(targets['timeofday'].numpy())
+            
+            # Store logits for advanced metrics
+            weather_logits_all.append(outputs['weather'].cpu())
+            time_logits_all.append(outputs['timeofday'].cpu())
+    
+    # Concatenate all logits
+    weather_logits_all = torch.cat(weather_logits_all, dim=0)
+    time_logits_all = torch.cat(time_logits_all, dim=0)
+    weather_targets_tensor = torch.tensor(weather_targets)
+    time_targets_tensor = torch.tensor(time_targets)
+    
+    # Calculate advanced metrics
+    weather_top3 = top_k_accuracy(weather_logits_all, weather_targets_tensor, k=3)
+    time_top3 = top_k_accuracy(time_logits_all, time_targets_tensor, k=3)
+    
+    weather_conf = average_confidence(weather_logits_all, weather_targets_tensor)
+    time_conf = average_confidence(time_logits_all, time_targets_tensor)
+    
+    weather_conf_by_class = confidence_by_class(weather_logits_all, weather_targets_tensor, num_weather_classes)
+    time_conf_by_class = confidence_by_class(time_logits_all, time_targets_tensor, num_time_classes)
 
     weather_report = classification_report(
         weather_targets,
@@ -185,10 +207,39 @@ Evaluation Summary
 ==================
 Timestamp: {timestamp}
 Checkpoint: {checkpoint_path}
+Backbone: {backbone_name}
 
-Weather Accuracy: {weather_acc:.4f}
-Time of Day Accuracy: {time_acc:.4f}
+Primary Metrics:
+----------------
+Weather Accuracy:       {weather_acc:.4f} ({weather_acc*100:.2f}%)
+Time of Day Accuracy:   {time_acc:.4f} ({time_acc*100:.2f}%)
+
+Advanced Metrics:
+-----------------
+Weather Top-3 Accuracy: {weather_top3:.4f} ({weather_top3*100:.2f}%)
+Time Top-3 Accuracy:    {time_top3:.4f} ({time_top3*100:.2f}%)
+
+Average Confidence (Correct Predictions):
+------------------------------------------
+Weather:                {weather_conf:.4f} ({weather_conf*100:.2f}%)
+Time of Day:            {time_conf:.4f} ({time_conf*100:.2f}%)
+
+Per-Class Confidence (Weather):
+--------------------------------
 """
+    
+    for class_idx, class_name in enumerate(config['classes']['weather']):
+        conf = weather_conf_by_class[class_idx]
+        summary += f"  {class_name:<15}: {conf:.4f} ({conf*100:.2f}%)\n"
+    
+    summary += "\nPer-Class Confidence (Time of Day):\n"
+    summary += "------------------------------------\n"
+    
+    for class_idx, class_name in enumerate(config['classes']['timeofday']):
+        conf = time_conf_by_class[class_idx]
+        summary += f"  {class_name:<15}: {conf:.4f} ({conf*100:.2f}%)\n"
+    
+    summary += "\n"
 
     print(summary)
 

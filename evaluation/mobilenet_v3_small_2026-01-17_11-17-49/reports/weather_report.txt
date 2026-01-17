@@ -1,0 +1,12 @@
+               precision    recall  f1-score   support
+
+        clear       0.87      0.92      0.89      5346
+partly cloudy       0.69      0.59      0.63       738
+     overcast       0.46      0.84      0.60      1252
+        rainy       0.80      0.68      0.73       738
+        snowy       0.72      0.72      0.72       769
+    undefined       0.00      0.00      0.00      1157
+
+     accuracy                           0.75     10000
+    macro avg       0.59      0.62      0.60     10000
+ weighted avg       0.69      0.75      0.71     10000

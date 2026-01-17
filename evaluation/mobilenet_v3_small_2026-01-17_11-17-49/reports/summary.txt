@@ -1,0 +1,38 @@
+
+Evaluation Summary
+==================
+Timestamp: 2026-01-17_11-17-49
+Checkpoint: checkpoints\mobilenet_v3_small\best_model_mobilenet_v3_small.pth
+Backbone: mobilenet_v3_small
+
+Primary Metrics:
+----------------
+Weather Accuracy:       0.7479 (74.79%)
+Time of Day Accuracy:   0.9339 (93.39%)
+
+Advanced Metrics:
+-----------------
+Weather Top-3 Accuracy: 0.8793 (87.93%)
+Time Top-3 Accuracy:    0.9965 (99.65%)
+
+Average Confidence (Correct Predictions):
+------------------------------------------
+Weather:                0.8816 (88.16%)
+Time of Day:            0.9528 (95.28%)
+
+Per-Class Confidence (Weather):
+--------------------------------
+  clear          : 0.9131 (91.31%)
+  partly cloudy  : 0.7294 (72.94%)
+  overcast       : 0.7936 (79.36%)
+  rainy          : 0.8842 (88.42%)
+  snowy          : 0.8843 (88.43%)
+  undefined      : 0.0000 (0.00%)
+
+Per-Class Confidence (Time of Day):
+------------------------------------
+  daytime        : 0.9434 (94.34%)
+  dawn/dusk      : 0.7577 (75.77%)
+  night          : 0.9856 (98.56%)
+  undefined      : 0.0000 (0.00%)
+

@@ -7,10 +7,13 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 from tqdm import tqdm
 import argparse
+import json
+from datetime import datetime
 
 from datasets.bdd_dataset import BDDDataset
 from models.multitask_model import MultiTaskModel
 from utils.metrics import compute_accuracy, AverageMeter
+from utils.visualization import plot_training_curves, save_training_history, print_training_summary
 
 def train(backbone_name='resnet18'):
     # Load config
@@ -22,13 +25,16 @@ def train(backbone_name='resnet18'):
     print(f"Using device: {device}")
     print(f"Backbone: {backbone_name}")
 
-    # Transforms - Original simple approach that worked
+    # Transforms - Enhanced augmentation to prevent overfitting
     train_transforms = transforms.Compose([
         transforms.Resize(tuple(config['augmentation']['input_size'])),
-        transforms.RandomHorizontalFlip(),
-        transforms.ColorJitter(brightness=0.2, contrast=0.2),
+        transforms.RandomHorizontalFlip(p=0.5),
+        transforms.RandomRotation(degrees=15),
+        transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.2, hue=0.1),
+        transforms.RandomAffine(degrees=0, translate=(0.1, 0.1), scale=(0.9, 1.1)),
         transforms.ToTensor(),
-        transforms.Normalize(mean=config['augmentation']['mean'], std=config['augmentation']['std'])
+        transforms.Normalize(mean=config['augmentation']['mean'], std=config['augmentation']['std']),
+        transforms.RandomErasing(p=0.2, scale=(0.02, 0.1))
     ])
 
     val_transforms = transforms.Compose([
@@ -55,7 +61,7 @@ def train(backbone_name='resnet18'):
     )
 
     train_loader = DataLoader(train_dataset, batch_size=config['train']['batch_size'], shuffle=True, num_workers=4)
-    val_loader = DataLoader(val_dataset, batch_size=config['train']['batch_size'], shuffle=False, num_workers=4)
+    val_loader = DataLoader(val_dataset, batch_size=config['train']['batch_size'] * 2, shuffle=False, num_workers=4)  # Larger batch for validation
 
     # Model with specified backbone
     model = MultiTaskModel(
@@ -87,19 +93,53 @@ def train(backbone_name='resnet18'):
     time_criterion = nn.CrossEntropyLoss(weight=time_weights.to(device))
     
     optimizer = optim.AdamW(model.parameters(), lr=config['train']['lr'], weight_decay=config['train']['weight_decay'])
+    
+    # Learning rate scheduler - reduces LR when validation loss plateaus
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer, 
+        mode='min',           # Minimize validation loss
+        factor=0.5,           # Reduce LR by 50%
+        patience=2,           # Wait 2 epochs before reducing
+        min_lr=1e-6          # Don't go below this
+    )
+    print(f"Learning rate scheduler: ReduceLROnPlateau (factor=0.5, patience=2)")
 
     # Training Loop
     best_val_loss = float('inf')
     num_epochs = config['train']['num_epochs']
     
+    # Early stopping parameters
+    patience = 3
+    patience_counter = 0
+    early_stop = False
+    
     # Create checkpoint directory with backbone name
     checkpoint_dir = os.path.join(config['train']['checkpoint_dir'], backbone_name)
     os.makedirs(checkpoint_dir, exist_ok=True)
     print(f"Checkpoints will be saved to: {checkpoint_dir}")
+    print(f"Early stopping enabled with patience={patience}")
+    
+    # Initialize training history
+    history = {
+        'backbone': backbone_name,
+        'start_time': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        'config': {
+            'lr': config['train']['lr'],
+            'batch_size': config['train']['batch_size'],
+            'num_epochs': num_epochs,
+            'early_stopping_patience': patience
+        },
+        'epochs': [],
+        'best_epoch': 0,
+        'best_val_loss': float('inf'),
+        'stopped_early': False
+    }
 
     for epoch in range(num_epochs):
         model.train()
         train_loss = AverageMeter()
+        train_weather_loss = AverageMeter()
+        train_time_loss = AverageMeter()
         train_weather_acc = AverageMeter()
         train_time_acc = AverageMeter()
 
@@ -121,28 +161,77 @@ def train(backbone_name='resnet18'):
 
             # Metrics
             train_loss.update(loss.item(), images.size(0))
+            train_weather_loss.update(loss_weather.item(), images.size(0))
+            train_time_loss.update(loss_time.item(), images.size(0))
             train_weather_acc.update(compute_accuracy(outputs['weather'], weather_targets), images.size(0))
             train_time_acc.update(compute_accuracy(outputs['timeofday'], time_targets), images.size(0))
 
             pbar.set_postfix({'loss': f"{train_loss.avg:.4f}", 'w_acc': f"{train_weather_acc.avg:.4f}", 't_acc': f"{train_time_acc.avg:.4f}"})
 
         # Validation
-        val_loss, val_w_acc, val_t_acc = evaluate(model, val_loader, weather_criterion, time_criterion, device)
-        print(f"Val - Loss: {val_loss:.4f}, Weather Acc: {val_w_acc:.4f}, Time Acc: {val_t_acc:.4f}")
+        val_loss, val_weather_loss, val_time_loss, val_w_acc, val_t_acc = evaluate(
+            model, val_loader, weather_criterion, time_criterion, device
+        )
+        print(f"Val - Loss: {val_loss:.4f} (W: {val_weather_loss:.4f}, T: {val_time_loss:.4f}), "
+              f"Weather Acc: {val_w_acc:.4f}, Time Acc: {val_t_acc:.4f}")
+        
+        # Record epoch history
+        history['epochs'].append({
+            'epoch': epoch + 1,
+            'train_loss': train_loss.avg,
+            'train_weather_loss': train_weather_loss.avg,
+            'train_time_loss': train_time_loss.avg,
+            'train_weather_acc': train_weather_acc.avg,
+            'train_time_acc': train_time_acc.avg,
+            'val_loss': val_loss,
+            'val_weather_loss': val_weather_loss,
+            'val_time_loss': val_time_loss,
+            'val_weather_acc': val_w_acc,
+            'val_time_acc': val_t_acc,
+            'lr': optimizer.param_groups[0]['lr']
+        })
+        
+        # Update learning rate based on validation loss
+        scheduler.step(val_loss)
 
         # Checkpoint with backbone name
         if val_loss < best_val_loss:
             best_val_loss = val_loss
+            history['best_epoch'] = epoch + 1
+            history['best_val_loss'] = val_loss
+            patience_counter = 0  # Reset counter
             torch.save(model.state_dict(), os.path.join(checkpoint_dir, f"best_model_{backbone_name}.pth"))
-            print(f"Saved best model: best_model_{backbone_name}.pth")
+            print(f"✓ Saved best model: best_model_{backbone_name}.pth (val_loss: {val_loss:.4f})")
+        else:
+            patience_counter += 1
+            print(f"⚠ No improvement for {patience_counter}/{patience} epochs")
 
         if (epoch + 1) % config['train']['save_freq'] == 0:
             torch.save(model.state_dict(), os.path.join(checkpoint_dir, f"checkpoint_epoch_{epoch+1}_{backbone_name}.pth"))
+        
+        # Early stopping check
+        if patience_counter >= patience:
+            print(f"\n🛑 Early stopping triggered at epoch {epoch+1}")
+            print(f"   Best validation loss: {best_val_loss:.4f} at epoch {history['best_epoch']}")
+            history['stopped_early'] = True
+            early_stop = True
+            break
+    
+    # Generate plots and save history only once at the end
+    print("\nGenerating training visualizations...")
+    save_training_history(history, checkpoint_dir, backbone_name)
+    plot_training_curves(history, checkpoint_dir, backbone_name)
+    
+    # Print final training summary
+    history['end_time'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print_training_summary(history)
 
 
 def evaluate(model, val_loader, weather_criterion, time_criterion, device):
     model.eval()
     losses = AverageMeter()
+    weather_losses = AverageMeter()
+    time_losses = AverageMeter()
     weather_accs = AverageMeter()
     time_accs = AverageMeter()
 
@@ -159,10 +248,12 @@ def evaluate(model, val_loader, weather_criterion, time_criterion, device):
             loss = loss_weather + loss_time
 
             losses.update(loss.item(), images.size(0))
+            weather_losses.update(loss_weather.item(), images.size(0))
+            time_losses.update(loss_time.item(), images.size(0))
             weather_accs.update(compute_accuracy(outputs['weather'], weather_targets), images.size(0))
             time_accs.update(compute_accuracy(outputs['timeofday'], time_targets), images.size(0))
 
-    return losses.avg, weather_accs.avg, time_accs.avg
+    return losses.avg, weather_losses.avg, time_losses.avg, weather_accs.avg, time_accs.avg
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Train multi-task weather and time-of-day classifier')

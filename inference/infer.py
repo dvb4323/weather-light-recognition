@@ -22,8 +22,10 @@ def build_transforms(config):
         )
     ])
 
-def load_model(model_path, config, device):
+def load_model(model_path, config, device, backbone_name='resnet18'):
     model = MultiTaskModel(
+        backbone_name=backbone_name,
+        pretrained=False,  # Loading from checkpoint
         num_weather_classes=config['model']['num_weather_classes'],
         num_time_classes=config['model']['num_time_classes']
     ).to(device)
@@ -48,7 +50,7 @@ def run_inference(model, input_tensor, config, device):
         "timeofday": config['classes']['timeofday'][t_idx]
     }
 
-def infer(image_path, model_path, config_path="config.yaml"):
+def infer(image_path, model_path, config_path="config.yaml", backbone='resnet18'):
     config = load_config(config_path)
 
     device = torch.device(
@@ -56,7 +58,7 @@ def infer(image_path, model_path, config_path="config.yaml"):
     )
 
     transform = build_transforms(config)
-    model = load_model(model_path, config, device)
+    model = load_model(model_path, config, device, backbone_name=backbone)
 
     image = Image.open(image_path).convert("RGB")
     input_tensor = transform(image).unsqueeze(0).to(device)
@@ -72,6 +74,11 @@ if __name__ == "__main__":
     parser.add_argument("--image", type=str, required=True, help="Path to input image")
     parser.add_argument("--model", type=str, default=model_path, help="Path to model checkpoint")
     parser.add_argument("--config", type=str, default="config.yaml", help="Config file")
+    parser.add_argument("--backbone", type=str, default="resnet18",
+                        choices=['resnet18', 'resnet34', 'resnet50',
+                                'efficientnet_b0', 'efficientnet_b1', 'efficientnet_b2',
+                                'mobilenet_v3_small', 'mobilenet_v3_large'],
+                        help="Backbone architecture used in the model")
     args = parser.parse_args()
 
-    infer(args.image, args.model, args.config)
+    infer(args.image, args.model, args.config, args.backbone)

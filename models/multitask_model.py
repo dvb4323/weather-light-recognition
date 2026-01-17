@@ -17,6 +17,9 @@ class MultiTaskModel(nn.Module):
         # Adaptive pooling to handle different output shapes
         self.adaptive_pool = nn.AdaptiveAvgPool2d((1, 1))
         
+        # Dropout for regularization (prevents overfitting)
+        self.dropout = nn.Dropout(0.3)
+        
         self.weather_head = nn.Linear(self.feature_dim, num_weather_classes)
         self.time_head = nn.Linear(self.feature_dim, num_time_classes)
         
@@ -29,6 +32,9 @@ class MultiTaskModel(nn.Module):
             features = self.adaptive_pool(features)
         
         features = torch.flatten(features, 1)
+        
+        # Apply dropout (only active during training)
+        features = self.dropout(features)
         
         # Pass through heads
         weather_logits = self.weather_head(features)

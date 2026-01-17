@@ -3,11 +3,13 @@
 Dự án nhận diện điều kiện môi trường (Thời tiết và Thời gian trong ngày) từ ảnh camera sử dụng bộ dữ liệu BDD100K.
 
 ## 🚀 Tính năng
+
 - **Multi-task Learning**: Sử dụng 1 backbone chung (ResNet18) và 2 heads phân loại riêng biệt.
 - **Dễ cấu hình**: Điều chỉnh tham số qua `config.yaml`.
 - **Đầy đủ Pipeline**: Từ tiền xử lý dữ liệu, huấn luyện, đánh giá đến suy diễn (inference).
 
 ## 📁 Cấu trúc thư mục
+
 ```
 project_root/
 ├── data/               # Chứa dữ liệu train/val/test
@@ -50,20 +52,20 @@ pip install -r requirements.txt
 
 - `data/val/img` & `data/val/ann`
 
-
 ### 3. Chuẩn bị dữ liệu
 
-* Kiểm tra môi trường có cuda không:
+- Kiểm tra môi trường có cuda không:
 
 ```bash
 python check_gpu.py
 ```
 
-* Chuẩn bị dữ liệu:
+- Chuẩn bị dữ liệu:
 
 ```bash
 python split_dataset.py
 ```
+
 Train: 59,990 images (from original 70K train)
 Val: 10,010 images (from original 70K train)
 Test: 10,000 images (original val set - has proper labels!)
@@ -71,32 +73,36 @@ Test: 10,000 images (original val set - has proper labels!)
 ### 4. Huấn luyện
 
 ```bash
-python -m training.train
+python -m training.train --backbone resnet18
 ```
-Checkpoints sẽ được lưu trong thư mục `checkpoints/`.
+
+Checkpoints sẽ được lưu trong thư mục `checkpoints/"backbone name_time stamp"`.
 
 ### 5. Đánh giá
 
 ```bash
-python -m training.evaluate
+python -m training.evaluate --backbone
 ```
+
 Lệnh này sẽ tạo ra Confusion Matrix và in báo cáo F1-score.
 
 ### 6. Suy diễn (Inference)
 
 ```bash
-python -m inference.infer --image path/to/image.jpg --model checkpoints/best_model.pth
+python -m inference.infer --image path/to/image.jpg --model checkpoints/best_model.pth --backbone
 ```
 
 ## 📊 Kết quả mong đợi
 
 Mô hình sẽ xuất ra dự đoán dưới dạng:
+
 ```json
 {
   "weather": "rainy",
   "timeofday": "night"
 }
 ```
+
 ### 7. Trực quan hóa kết quả
 
 ```bash
