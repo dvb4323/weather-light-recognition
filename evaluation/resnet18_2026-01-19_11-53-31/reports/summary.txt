@@ -1,0 +1,46 @@
+
+Evaluation Report
+=================
+Date: 2026-01-19_11-53-31
+Model Backbone: resnet18
+Model Source: checkpoints\resnet18\best_model_resnet18.pth
+
+Global Metrics:
+---------------
+Weather Accuracy: 0.7903
+Weather Macro F1: 0.7712
+Avg Weather Confidence: 0.8300
+
+Time Accuracy:    0.9128
+Time Macro F1:    0.8712
+Avg Time Confidence:    0.9216
+
+--------------------------------------------------
+DETAILED WEATHER REPORT
+--------------------------------------------------
+               precision    recall  f1-score   support
+
+        clear       0.84      0.87      0.86      2403
+partly cloudy       0.72      0.68      0.70       907
+     overcast       0.66      0.82      0.73      1048
+        rainy       0.85      0.70      0.77       919
+        snowy       0.85      0.75      0.80       893
+
+     accuracy                           0.79      6170
+    macro avg       0.79      0.76      0.77      6170
+ weighted avg       0.80      0.79      0.79      6170
+
+
+--------------------------------------------------
+DETAILED TIME REPORT
+--------------------------------------------------
+              precision    recall  f1-score   support
+
+     daytime       0.92      0.92      0.92      3188
+   dawn/dusk       0.72      0.71      0.71       872
+       night       0.97      0.98      0.98      2110
+
+    accuracy                           0.91      6170
+   macro avg       0.87      0.87      0.87      6170
+weighted avg       0.91      0.91      0.91      6170
+

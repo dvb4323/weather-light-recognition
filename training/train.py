@@ -7,37 +7,46 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 from tqdm import tqdm
 import argparse
+import csv
 
 from datasets.bdd_dataset import BDDDataset
 from models.multitask_model import MultiTaskModel
 from utils.metrics import compute_accuracy, AverageMeter
 
-def train(backbone_name='resnet18'):
+def train(backbone_name=None):
     # Load config
     with open("config.yaml", "r") as f:
         config = yaml.safe_load(f)
 
+    # LOGIC ƯU TIÊN: CLI > Config YAML > Mặc định
+    if backbone_name is None:
+        if 'model' in config and 'backbone' in config['model']:
+            backbone_name = config['model']['backbone']
+        else:
+            backbone_name = 'resnet18'
+            print("Warning: 'backbone' not found in config.yaml. Using default 'resnet18'.")
+
     # Device setup
     device = torch.device(config['train']['device'] if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
-    print(f"Backbone: {backbone_name}")
+    print(f"✅ Backbone selected: {backbone_name}")
 
-    # Transforms - Original simple approach that worked
+    # --- TRANSFORMS ---
     train_transforms = transforms.Compose([
-        transforms.Resize(tuple(config['augmentation']['input_size'])),
+        transforms.RandomResizedCrop(size=tuple(config['augmentation']['input_size']), scale=(0.8, 1.0)),
         transforms.RandomHorizontalFlip(),
-        transforms.ColorJitter(brightness=0.2, contrast=0.2),
+        transforms.RandomRotation(degrees=15),
         transforms.ToTensor(),
         transforms.Normalize(mean=config['augmentation']['mean'], std=config['augmentation']['std'])
     ])
 
     val_transforms = transforms.Compose([
-        transforms.Resize(tuple(config['augmentation']['input_size'])),
         transforms.ToTensor(),
         transforms.Normalize(mean=config['augmentation']['mean'], std=config['augmentation']['std'])
     ])
 
-    # Datasets & DataLoaders
+    # Datasets
+    print("Initializing Datasets...")
     train_dataset = BDDDataset(
         img_dir=config['data']['train_images'],
         ann_dir=config['data']['train_anns'],
@@ -54,10 +63,26 @@ def train(backbone_name='resnet18'):
         time_classes=config['classes']['timeofday']
     )
 
-    train_loader = DataLoader(train_dataset, batch_size=config['train']['batch_size'], shuffle=True, num_workers=4)
-    val_loader = DataLoader(val_dataset, batch_size=config['train']['batch_size'], shuffle=False, num_workers=4)
+    # DataLoaders
+    train_loader = DataLoader(
+        train_dataset, 
+        batch_size=config['train']['batch_size'], 
+        shuffle=True, 
+        num_workers=4, 
+        pin_memory=True,
+        persistent_workers=True
+    )
+    
+    val_loader = DataLoader(
+        val_dataset, 
+        batch_size=config['train']['batch_size'], 
+        shuffle=False, 
+        num_workers=4, 
+        pin_memory=True,
+        persistent_workers=True
+    )
 
-    # Model with specified backbone
+    # Model
     model = MultiTaskModel(
         backbone_name=backbone_name,
         pretrained=config['model']['pretrained'],
@@ -67,39 +92,51 @@ def train(backbone_name='resnet18'):
 
     print(f"Model created with {backbone_name} backbone")
 
-    # Loss & Optimizer - Original simple approach that worked
-    # All classes weight 1.0, except undefined gets low weight
-    num_weather_classes = config['model']['num_weather_classes']
-    num_time_classes = config['model']['num_time_classes']
+    # --- MANUAL CLASS WEIGHTS ---
+    w_weights = [0.4, 2.0, 1.5, 2.0, 2.0]
+    weather_weights = torch.FloatTensor(w_weights).to(device)
     
-    # Weather weights: [1.0, 1.0, 1.0, 1.0, 1.0, 0.01]
-    weather_weights = torch.ones(num_weather_classes)
-    weather_weights[-1] = 0.01  # undefined
+    t_weights = [0.8, 3.0, 0.8]
+    time_weights = torch.FloatTensor(t_weights).to(device)
     
-    # Time weights: [1.0, 1.0, 1.0, 0.01]
-    time_weights = torch.ones(num_time_classes)
-    time_weights[-1] = 0.01  # undefined
+    # Loss Function
+    weather_criterion = nn.CrossEntropyLoss(weight=weather_weights)
+    time_criterion = nn.CrossEntropyLoss(weight=time_weights)
     
-    print(f"Weather class weights: {weather_weights.tolist()}")
-    print(f"Time class weights: {time_weights.tolist()}")
+    # Optimizer
+    optimizer = optim.AdamW(model.parameters(), lr=config['train']['lr'], weight_decay=1e-3)
     
-    weather_criterion = nn.CrossEntropyLoss(weight=weather_weights.to(device))
-    time_criterion = nn.CrossEntropyLoss(weight=time_weights.to(device))
-    
-    optimizer = optim.AdamW(model.parameters(), lr=config['train']['lr'], weight_decay=config['train']['weight_decay'])
+    # Scheduler
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=2, verbose=True)
 
-    # Training Loop
-    best_val_loss = float('inf')
+    # Training Setup
+    best_val_loss = float('inf') # Chỉ giữ lại biến này
+    
     num_epochs = config['train']['num_epochs']
     
-    # Create checkpoint directory with backbone name
     checkpoint_dir = os.path.join(config['train']['checkpoint_dir'], backbone_name)
     os.makedirs(checkpoint_dir, exist_ok=True)
     print(f"Checkpoints will be saved to: {checkpoint_dir}")
 
+    # File Log
+    log_path = os.path.join(checkpoint_dir, "training_log.csv")
+    with open(log_path, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow([
+            "Epoch", "LR",
+            "Train_Loss", "Train_Weather_Loss", "Train_Time_Loss", 
+            "Train_Weather_Acc", "Train_Time_Acc", 
+            "Val_Loss", "Val_Weather_Loss", "Val_Time_Loss",
+            "Val_Weather_Acc", "Val_Time_Acc"
+        ])
+
+    # Training Loop
     for epoch in range(num_epochs):
         model.train()
         train_loss = AverageMeter()
+        train_loss_weather = AverageMeter()
+        train_loss_time = AverageMeter()
+        
         train_weather_acc = AverageMeter()
         train_time_acc = AverageMeter()
 
@@ -112,37 +149,75 @@ def train(backbone_name='resnet18'):
             optimizer.zero_grad()
             outputs = model(images)
 
-            loss_weather = weather_criterion(outputs['weather'], weather_targets)
-            loss_time = time_criterion(outputs['timeofday'], time_targets)
-            loss = loss_weather + loss_time
+            loss_w = weather_criterion(outputs['weather'], weather_targets)
+            loss_t = time_criterion(outputs['timeofday'], time_targets)
+            loss = loss_w + loss_t
 
             loss.backward()
             optimizer.step()
 
-            # Metrics
-            train_loss.update(loss.item(), images.size(0))
-            train_weather_acc.update(compute_accuracy(outputs['weather'], weather_targets), images.size(0))
-            train_time_acc.update(compute_accuracy(outputs['timeofday'], time_targets), images.size(0))
+            batch_size = images.size(0)
+            train_loss.update(loss.item(), batch_size)
+            train_loss_weather.update(loss_w.item(), batch_size)
+            train_loss_time.update(loss_t.item(), batch_size)
+            
+            train_weather_acc.update(compute_accuracy(outputs['weather'], weather_targets), batch_size)
+            train_time_acc.update(compute_accuracy(outputs['timeofday'], time_targets), batch_size)
 
-            pbar.set_postfix({'loss': f"{train_loss.avg:.4f}", 'w_acc': f"{train_weather_acc.avg:.4f}", 't_acc': f"{train_time_acc.avg:.4f}"})
+            pbar.set_postfix({
+                'loss': f"{train_loss.avg:.3f}",
+                'loss_w': f"{train_loss_weather.avg:.3f}",
+                'loss_t': f"{train_loss_time.avg:.3f}",
+                'w_acc': f"{train_weather_acc.avg:.3f}",
+                't_acc': f"{train_time_acc.avg:.3f}"
+            })
 
         # Validation
-        val_loss, val_w_acc, val_t_acc = evaluate(model, val_loader, weather_criterion, time_criterion, device)
-        print(f"Val - Loss: {val_loss:.4f}, Weather Acc: {val_w_acc:.4f}, Time Acc: {val_t_acc:.4f}")
+        val_metrics = evaluate(model, val_loader, weather_criterion, time_criterion, device)
+        (val_loss, val_loss_w, val_loss_t, val_w_acc, val_t_acc) = val_metrics
+        
+        # Cập nhật Scheduler
+        scheduler.step(val_loss)
+        current_lr = optimizer.param_groups[0]['lr']
 
-        # Checkpoint with backbone name
+        # Ghi Log
+        with open(log_path, "a", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                epoch + 1,
+                f"{current_lr:.1e}",
+                f"{train_loss.avg:.4f}",
+                f"{train_loss_weather.avg:.4f}",
+                f"{train_loss_time.avg:.4f}",
+                f"{train_weather_acc.avg:.4f}",
+                f"{train_time_acc.avg:.4f}",
+                f"{val_loss:.4f}",
+                f"{val_loss_w:.4f}",
+                f"{val_loss_t:.4f}",
+                f"{val_w_acc:.4f}",
+                f"{val_t_acc:.4f}"
+            ])
+            
+        print(f"Val - Total Loss: {val_loss:.4f} | W_Acc: {val_w_acc:.4f} | T_Acc: {val_t_acc:.4f} | LR: {current_lr:.1e}")
+
+        # --- [SỬA] CHỈ LƯU 1 BEST MODEL DỰA TRÊN VAL LOSS ---
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            torch.save(model.state_dict(), os.path.join(checkpoint_dir, f"best_model_{backbone_name}.pth"))
-            print(f"Saved best model: best_model_{backbone_name}.pth")
+            # Đặt tên file là best_model_{backbone}.pth
+            path_val = os.path.join(checkpoint_dir, f"best_model_{backbone_name}.pth")
+            torch.save(model.state_dict(), path_val)
+            print(f"🔥 Found new best model! Saved to: {path_val} (Val Loss: {best_val_loss:.4f})")
 
+        # Lưu checkpoint định kỳ (giữ nguyên nếu muốn backup)
         if (epoch + 1) % config['train']['save_freq'] == 0:
             torch.save(model.state_dict(), os.path.join(checkpoint_dir, f"checkpoint_epoch_{epoch+1}_{backbone_name}.pth"))
-
 
 def evaluate(model, val_loader, weather_criterion, time_criterion, device):
     model.eval()
     losses = AverageMeter()
+    losses_weather = AverageMeter()
+    losses_time = AverageMeter()
+    
     weather_accs = AverageMeter()
     time_accs = AverageMeter()
 
@@ -154,28 +229,28 @@ def evaluate(model, val_loader, weather_criterion, time_criterion, device):
 
             outputs = model(images)
 
-            loss_weather = weather_criterion(outputs['weather'], weather_targets)
-            loss_time = time_criterion(outputs['timeofday'], time_targets)
-            loss = loss_weather + loss_time
+            loss_w = weather_criterion(outputs['weather'], weather_targets)
+            loss_t = time_criterion(outputs['timeofday'], time_targets)
+            loss = loss_w + loss_t
 
-            losses.update(loss.item(), images.size(0))
-            weather_accs.update(compute_accuracy(outputs['weather'], weather_targets), images.size(0))
-            time_accs.update(compute_accuracy(outputs['timeofday'], time_targets), images.size(0))
+            batch_size = images.size(0)
+            losses.update(loss.item(), batch_size)
+            losses_weather.update(loss_w.item(), batch_size)
+            losses_time.update(loss_t.item(), batch_size)
+            
+            weather_accs.update(compute_accuracy(outputs['weather'], weather_targets), batch_size)
+            time_accs.update(compute_accuracy(outputs['timeofday'], time_targets), batch_size)
 
-    return losses.avg, weather_accs.avg, time_accs.avg
+    return losses.avg, losses_weather.avg, losses_time.avg, weather_accs.avg, time_accs.avg
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Train multi-task weather and time-of-day classifier')
-    parser.add_argument('--backbone', type=str, default='resnet18',
+    parser.add_argument('--backbone', type=str, default=None,
                         choices=['resnet18', 'resnet34', 'resnet50', 
                                 'efficientnet_b0', 'efficientnet_b1', 'efficientnet_b2',
                                 'mobilenet_v3_small', 'mobilenet_v3_large'],
                         help='Backbone architecture to use')
     
     args = parser.parse_args()
-    
-    print("="*80)
-    print(f"Training with backbone: {args.backbone}")
-    print("="*80)
     
     train(backbone_name=args.backbone)

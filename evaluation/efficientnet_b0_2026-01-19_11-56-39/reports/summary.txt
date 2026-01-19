@@ -1,0 +1,46 @@
+
+Evaluation Report
+=================
+Date: 2026-01-19_11-56-39
+Model Backbone: efficientnet_b0
+Model Source: checkpoints\efficientnet_b0\best_model_efficientnet_b0.pth
+
+Global Metrics:
+---------------
+Weather Accuracy: 0.7992
+Weather Macro F1: 0.7793
+Avg Weather Confidence: 0.8517
+
+Time Accuracy:    0.9100
+Time Macro F1:    0.8735
+Avg Time Confidence:    0.9059
+
+--------------------------------------------------
+DETAILED WEATHER REPORT
+--------------------------------------------------
+               precision    recall  f1-score   support
+
+        clear       0.84      0.89      0.87      2403
+partly cloudy       0.70      0.75      0.73       907
+     overcast       0.69      0.78      0.73      1048
+        rainy       0.89      0.66      0.76       919
+        snowy       0.88      0.76      0.81       893
+
+     accuracy                           0.80      6170
+    macro avg       0.80      0.77      0.78      6170
+ weighted avg       0.81      0.80      0.80      6170
+
+
+--------------------------------------------------
+DETAILED TIME REPORT
+--------------------------------------------------
+              precision    recall  f1-score   support
+
+     daytime       0.94      0.90      0.92      3188
+   dawn/dusk       0.68      0.77      0.72       872
+       night       0.98      0.98      0.98      2110
+
+    accuracy                           0.91      6170
+   macro avg       0.86      0.88      0.87      6170
+weighted avg       0.92      0.91      0.91      6170
+

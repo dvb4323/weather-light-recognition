@@ -2,12 +2,12 @@
 
 data:
   root: "data"
-  train_images: "data/new_train/img"
-  train_anns: "data/new_train/ann"
-  val_images: "data/new_val/img"
-  val_anns: "data/new_val/ann"
-  test_images: "data/val/img"  # Original val set (has labels)
-  test_anns: "data/val/ann"
+  train_images: "data/train_224/img"
+  train_anns: "data/train/ann"
+  val_images: "data/val_224/img"
+  val_anns: "data/val/ann"
+  test_images: "data/test/img"  # Original val set (has labels)
+  test_anns: "data/test/ann"
 
 classes:
   weather:
@@ -16,25 +16,22 @@ classes:
     - "overcast"
     - "rainy"
     - "snowy"
-    # foggy removed - only 110 samples (0.18%), untrainable
-    - "undefined"
   timeofday:
     - "daytime"
     - "dawn/dusk"
     - "night"
-    - "undefined"
 
 model:
-  backbone: "resnet18"
+  backbone: "efficientnet_b0"
   pretrained: true
-  num_weather_classes: 6  # Removed foggy
-  num_time_classes: 4     # Including undefined
+  num_weather_classes: 5  # Removed foggy
+  num_time_classes: 3     # Including undefined
 
 train:
   batch_size: 32
   num_epochs: 20
-  lr: 0.0001
-  weight_decay: 0.00001
+  lr: 0.00001
+  weight_decay: 0.001
   device: "cuda"  # or "cpu"
   checkpoint_dir: "checkpoints"
   save_freq: 5

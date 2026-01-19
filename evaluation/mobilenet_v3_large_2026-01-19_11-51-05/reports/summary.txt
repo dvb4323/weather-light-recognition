@@ -1,0 +1,46 @@
+
+Evaluation Report
+=================
+Date: 2026-01-19_11-51-05
+Model Backbone: mobilenet_v3_large
+Model Source: checkpoints\mobilenet_v3_large\best_model_mobilenet_v3_large.pth
+
+Global Metrics:
+---------------
+Weather Accuracy: 0.7929
+Weather Macro F1: 0.7738
+Avg Weather Confidence: 0.8356
+
+Time Accuracy:    0.9131
+Time Macro F1:    0.8732
+Avg Time Confidence:    0.9098
+
+--------------------------------------------------
+DETAILED WEATHER REPORT
+--------------------------------------------------
+               precision    recall  f1-score   support
+
+        clear       0.84      0.87      0.86      2403
+partly cloudy       0.70      0.73      0.71       907
+     overcast       0.66      0.83      0.74      1048
+        rainy       0.88      0.67      0.76       919
+        snowy       0.88      0.73      0.80       893
+
+     accuracy                           0.79      6170
+    macro avg       0.79      0.77      0.77      6170
+ weighted avg       0.80      0.79      0.79      6170
+
+
+--------------------------------------------------
+DETAILED TIME REPORT
+--------------------------------------------------
+              precision    recall  f1-score   support
+
+     daytime       0.93      0.92      0.92      3188
+   dawn/dusk       0.71      0.72      0.72       872
+       night       0.98      0.98      0.98      2110
+
+    accuracy                           0.91      6170
+   macro avg       0.87      0.87      0.87      6170
+weighted avg       0.91      0.91      0.91      6170
+

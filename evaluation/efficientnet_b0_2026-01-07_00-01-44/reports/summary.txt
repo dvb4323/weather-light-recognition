@@ -1,8 +1,0 @@
-
-Evaluation Summary
-==================
-Timestamp: 2026-01-07_00-01-44
-Checkpoint: checkpoints\efficientnet_b0\best_model_efficientnet_b0.pth
-
-Weather Accuracy: 0.7594
-Time of Day Accuracy: 0.9352
