@@ -21,3 +21,9 @@ inference/__pycache__/
 static/uploads/
 venv/
 .idea/
+data/new_train/ann/
+data/new_train/img/
+data/new_val/ann/
+data/new_val/img/
+checkpoint_* 
+
